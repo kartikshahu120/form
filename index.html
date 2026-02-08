@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Student Information Form</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:'Inter',sans-serif;
+}
+
+body{
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:linear-gradient(135deg,#667eea,#764ba2);
+}
+
+.card{
+  background:#fff;
+  width:100%;
+  max-width:450px;
+  padding:35px;
+  border-radius:16px;
+  box-shadow:0 20px 50px rgba(0,0,0,.25);
+}
+
+h2{
+  text-align:center;
+  margin-bottom:25px;
+}
+
+.row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+.full{
+  grid-column:1/-1;
+}
+
+label{
+  font-size:12px;
+  font-weight:600;
+  margin-bottom:5px;
+  display:block;
+}
+
+input,textarea{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:2px solid #e5e7eb;
+}
+
+input:focus,textarea:focus{
+  outline:none;
+  border-color:#667eea;
+}
+
+textarea{
+  min-height:90px;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  margin-top:12px;
+  border:none;
+  border-radius:8px;
+  background:#667eea;
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+}
+
+button:disabled{
+  opacity:.6;
+}
+
+#status{
+  text-align:center;
+  margin-top:12px;
+  font-weight:600;
+}
+
+.success{color:#16a34a;}
+.error{color:#dc2626;}
+
+@media(max-width:480px){
+  .row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>🎓 Student Form</h2>
+
+<form id="studentForm">
+
+  <div class="row">
+    <div>
+      <label>First Name</label>
+      <input name="name" required>
+    </div>
+
+    <div>
+      <label>Last Name</label>
+      <input name="lastName" required>
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <label>Email</label>
+      <input type="email" name="email" required>
+    </div>
+
+    <div>
+      <label>Roll No</label>
+      <input name="rollNo" required>
+    </div>
+  </div>
+
+  <div class="full">
+    <label>Message</label>
+    <textarea name="message" required></textarea>
+  </div>
+
+  <button type="submit" id="btn">Submit</button>
+
+  <p id="status"></p>
+
+</form>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+const URL = "https://script.google.com/macros/s/AKfycbyiKl0d3-afZR0L1Cknn6ehdF6URXLqSi1GwF030ZGFqTtgu-5Mb3emBUAP6yM33LgXEg/exec";
+
+const form = document.getElementById("studentForm");
+const status = document.getElementById("status");
+const btn = document.getElementById("btn");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  btn.disabled = true;
+  status.textContent = "Submitting...";
+
+  const formData = new FormData(form);
+
+  // Save values for PDF
+  const name = formData.get("name");
+  const lastName = formData.get("lastName");
+  const email = formData.get("email");
+  const rollNo = formData.get("rollNo");
+  const message = formData.get("message");
+
+  try {
+    const res = await fetch(URL, {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (data.status === "success") {
+
+      status.className = "success";
+      status.textContent = "✓ Saved successfully! Downloading PDF...";
+
+      // =====================
+      // ✅ GENERATE PDF
+      // =====================
+      const pdf = new jsPDF();
+
+      pdf.setFontSize(18);
+      pdf.text("Student Information", 20, 20);
+
+      pdf.setFontSize(12);
+
+      let y = 40;
+
+      pdf.text(`First Name : ${name}`, 20, y); y+=10;
+      pdf.text(`Last Name  : ${lastName}`, 20, y); y+=10;
+      pdf.text(`Email      : ${email}`, 20, y); y+=10;
+      pdf.text(`Roll No    : ${rollNo}`, 20, y); y+=10;
+
+      y+=10;
+      pdf.text("Message:", 20, y);
+      y+=10;
+
+      const splitMsg = pdf.splitTextToSize(message, 170);
+      pdf.text(splitMsg, 20, y);
+
+      pdf.save(`${name}_${rollNo}.pdf`);
+      // =====================
+
+      form.reset();
+
+    } else {
+      status.className = "error";
+      status.textContent = "✗ " + data.message;
+    }
+
+  } catch (err) {
+    status.className = "error";
+    status.textContent = "✗ Network error. Check deployment.";
+    console.error(err);
+  }
+
+  btn.disabled = false;
+});
+</script>
+
+</body>
+</html>
